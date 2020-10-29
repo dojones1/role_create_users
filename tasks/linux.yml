@@ -34,6 +34,10 @@
   set_fact:
     _initial_user: "{{ lookup('env', 'USER') }}"
 
+- name: create deploy user group
+  group:
+    name: deploy
+
 - name: Ensure that sudoers exists
   become: true
   copy:
