@@ -1,7 +1,13 @@
 ---
 - name: Converge
   hosts: all
-  tasks:
-    - name: "Include role_create_users"
-      include_role:
-        name: "role_create_users"
+  become: true
+  pre_tasks:
+    - name: Update apt cahce
+      apt: update_cache=yes cache_valid_time=600
+      when: ansible_os_family == 'Debian'
+
+  vars:
+    create_users_deploy_user: root
+  roles:
+    - "role_create_users"
