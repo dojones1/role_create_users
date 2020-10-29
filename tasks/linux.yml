@@ -30,7 +30,7 @@
 
   # Would use ansible_user, but this is not always defined e.g. if role run with become: true
   # https://github.com/ansible/ansible/issues/23530
-- name: Store inistal ansible_user
+- name: Store initial ansible_user
   set_fact:
     _initial_user: "{{ lookup('env', 'USER') }}"
 
