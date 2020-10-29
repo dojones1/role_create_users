@@ -1,3 +1,3 @@
 ---
-create_users_admin_groups_os: "{{ create_users_admin_groups_base }},plugdev,sudo"
+create_users_admin_groups_os: "{{ create_users_admin_groups_base }},sudo"
 ...
