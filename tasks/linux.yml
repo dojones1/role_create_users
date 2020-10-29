@@ -1,0 +1,161 @@
+---
+- name: Install libuser (Debian)
+  when: ansible_os_family == 'Debian'
+  block:
+    - name: update cache
+      apt:
+        update_cache: true
+    - name: install libuser (Debian)
+      apt:
+        name: libuser
+        state: present
+
+- name: Install libuser (RedHat)
+  when: ansible_os_family == 'RedHat'
+  block:
+    - name: Install libuser (RedHat 7)
+      when: ansible_distribution_major_version <= '7'
+      yum:
+        name: libuser
+        state: present
+
+    - name: Install libuser (RedHat 8)
+      when: ansible_distribution_major_version >= '8'
+      dnf:
+        name: libuser
+        state: present
+
+- name: Load OS Family specific defaults
+  include_vars: "defaults-{{ ansible_os_family }}.yml"
+
+  # Would use ansible_user, but this is not always defined e.g. if role run with become: true
+  # https://github.com/ansible/ansible/issues/23530
+- name: Store inistal ansible_user
+  set_fact:
+    _initial_user: "{{ lookup('env', 'USER') }}"
+
+- name: Ensure that sudoers exists
+  become: true
+  copy:
+    content: ""
+    dest: /etc/sudoers.d/sudoers
+    force: false
+    group: root
+    owner: root
+    mode: 0440
+
+- name: Allow password-less sudo for wheel users (Redhat)
+  when: create_users_allow_passwordless_sudo and ansible_os_family == "RedHat"
+  lineinfile:
+    path: "/etc/sudoers.d/sudoers"
+    regexp: "^%wheel.*$"
+    line: "%wheel ALL=(ALL:ALL) NOPASSWD:ALL"
+    validate: 'visudo -cf %s'
+
+- name: Create Deploy admin accounts
+  when: create_users_deploy_admins is defined
+  block:
+    - name: create create_users_deploy_admin accounts
+      user:
+        name: "{{ item.key }}"
+        groups: "{{ create_users_deploy_admins_groups }}"
+        password: "{{ lookup('password','/dev/null length=64 chars=ascii_letters,digits') | password_hash('sha512') }}"
+        shell: "{{ create_users_login_shell }}"
+        update_password: on_create
+      with_dict: "{{ create_users_deploy_admins }}"
+
+    - name: Deploy SSH public_keys for create_users_deploy_admin_accounts
+      authorized_key:
+        user: "{{ item.key }}"
+        key: "{{ item.value.sshpubkey }}"
+        exclusive: "yes"
+      when: item.value.sshpubkey is defined
+      with_dict: "{{ create_users_deploy_admins }}"
+
+- name: Change SSH user
+  set_fact:
+    ansible_user: "{{ _initial_user }}"
+    ansible_pass:
+
+- name: "Remove initial ansible_user: {{ create_users_initial_user }}"
+  user:
+    name: "{{ _initial_user }}"
+    state: absent
+    force: true
+  when:
+    - create_users_deploy_user != _initial_user
+    - create_users_deploy_admins is defined
+    - create_users_deploy_user in create_users_deploy_admins.keys()
+
+- name: Create admin accounts
+  when: create_users_admins is defined
+  block:
+    - name: create create_users_admin accounts
+      user:
+        name: "{{ item.key }}"
+        groups: "{{ create_users_admin_groups }}"
+        password: "{{ lookup('password','credentials/' + inventory_hostname + '/' + item + ' length=2 chars=ascii_letters,digits') | password_hash('sha512') }}"
+        shell: "{{ create_users_login_shell }}"
+        update_password: on_create
+      with_dict: "{{ create_users_admins }}"
+      register: _created_admin_accounts
+
+    - name: Deploy SSH public_keys for create_users_admin_accounts
+      authorized_key:
+        user: "{{ item.key }}"
+        key: "{{ item.value.sshpubkey }}"
+        exclusive: "yes"
+      when: item.value.sshpubkey is defined
+      with_dict: "{{ create_users_admins }}"
+
+    - name: Allow sudo for sudo users
+      lineinfile:
+        path: "/etc/sudoers.d/sudoers"
+        regexp: "^%sudo.*$"
+        line: "%sudo ALL=(ALL:ALL) NOPASSWD:ALL"
+        validate: '/usr/bin/visudo -cf %s'
+
+    # Set password expiry and last changed dat to force password change if user has been modified
+    - name: Set password expiry for admins
+      command: chage -M {{ create_users_password_expiry_days }} -d "1970-01-01" {{ item.item }}
+      with_items: "{{ _create_admin_accounts.results }}"
+      when:
+        - _created_admin_accounts.results is defined
+        - item.changed
+
+- name: Create user accounts
+  when: create_users_users is defined
+  block:
+    - name: create create_users_users accounts
+      user:
+        name: "{{ item.key }}"
+        groups: "{{ create_users_users_groups }}"
+        password: "{{ lookup('password','credentials/' + inventory_hostname + '/' + item + ' length=2 chars=ascii_letters,digits') | password_hash('sha512') }}"
+        shell: "{{ create_users_login_shell }}"
+        update_password: on_create
+      with_dict: "{{ create_users_users }}"
+      register: _created_user_accounts
+
+    - name: Deploy SSH public_keys for create_users_user accounts
+      authorized_key:
+        user: "{{ item.key }}"
+        key: "{{ item.value.sshpubkey }}"
+        exclusive: "yes"
+      when: item.value.sshpubkey is defined
+      with_dict: "{{ create_users_users }}"
+
+    - name: Allow sudo for sudo users
+      lineinfile:
+        path: "/etc/sudoers.d/sudoers"
+        regexp: "^%sudo.*$"
+        line: "%sudo ALL=(ALL:ALL) NOPASSWD:ALL"
+        validate: '/usr/bin/visudo -cf %s'
+
+    # Set password expiry and last changed dat to force password change if user has been modified
+    - name: Set password expiry for users
+      command: chage -M {{ create_users_password_expiry_days }} -d "1970-01-01" {{ item.item }}
+      with_items: "{{ _created_user_accounts.results }}"
+      when:
+        - _created_user_accounts.results is defined
+        - item.changed
+...

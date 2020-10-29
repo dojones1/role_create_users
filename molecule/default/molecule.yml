@@ -1,0 +1,28 @@
+---
+dependency:
+  name: galaxy
+# driver:
+#   name: docker
+lint: |
+  set -e
+  yamllint .
+  ansible-lint
+platforms:
+  - name: instance
+    image: geerlingguy/docker-${MOLECULE_DISTRO:-centos8}-ansible:latest"
+    comment: ${MOLECULE_DOCKER_COMMAND:-""}
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    privileged: true
+    pre_build_image: true
+provisioner:
+  name: ansible
+scenario:
+  name: default
+# test_sequence:
+#   - lint
+#   - dependency
+# Default scenario was at:
+# https://molecule.readthedocs.io/en/latest/configuration.html#molecule.scenario.Scenario
+verifier:
+  name: testinfra

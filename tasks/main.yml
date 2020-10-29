@@ -1,0 +1,10 @@
+---
+# tasks file for role_create_users
+- name: Check that mandatory variables are defined
+  assert:
+    that:
+      - create_users_deploy_user is defined
+
+- include: linux.yml
+  when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat'
+...

@@ -1,0 +1,45 @@
+---
+# defaults file for role_create_users
+
+# create_users_deploy_user:
+# Default user for deployment - This is a mandatory parameter - This should be vagrant if running from vagrant boxes
+
+create_users_login_shell: "/bin/bash"
+# Default shell to be assigned to users
+
+create_users_password_expiry_days: 365
+# Default duration for user passwords
+
+create_users_allow_passwordless_sudo: true
+# Enables passwordless sudo
+# Note: This role will not toffle the flag if the inventory value is changed after initial execution on the host
+
+# The following variables should be overwritten
+# create_users_deploy_admins: {}
+# Should be of the form:
+# create_users_deploy_admins:
+#   <user>:
+#     sshpubkey:
+
+create_users_admin_groups_base: "adm,cdrom"
+create_users_deploy_admins_groups: "{{ create_users_admin_groups_os }},deploy"
+# Groups to be granted to deploy admins
+
+# create_users_admins: {}
+# Should be of the form:
+# create_users_admins:
+#   <user>:
+#     sshpubkey: "ssh-rsa BLAHBLAHBLAH <user>"
+
+create_users_admins_groups: "{{ create_users_admin_groups_os }}"
+# Groups to be joined for normal admins
+
+# create_users_users: {}
+# Should be of the form:
+# create_users_users:
+#   <user>:
+#     sshpubkey: "ssh-rsa BLAHBLAHBLAH <user>"
+
+create_users_users_groups:
+# Groups to be joined for normal users
+...

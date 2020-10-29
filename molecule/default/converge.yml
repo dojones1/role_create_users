@@ -1,0 +1,7 @@
+---
+- name: Converge
+  hosts: all
+  tasks:
+    - name: "Include role_create_users"
+      include_role:
+        name: "role_create_users"
