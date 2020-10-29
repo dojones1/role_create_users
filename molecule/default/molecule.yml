@@ -18,10 +18,10 @@ platforms:
 provisioner:
   name: ansible
 scenario:
-  name: default
-# test_sequence:
-#   - lint
-#   - dependency
+  # name: default
+  test_sequence:
+    - lint
+    - dependency
 # Default scenario was at:
 # https://molecule.readthedocs.io/en/latest/configuration.html#molecule.scenario.Scenario
 verifier:
